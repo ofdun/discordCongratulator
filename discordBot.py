@@ -9,7 +9,9 @@ import discord
 from discord.ext import commands
 import json
 from const import HELP
-from random import choice
+from random import choice, randint
+from exceptions import ImpossibleTimeError
+import asyncio
 
 
 with open('settings.json') as f:
@@ -31,7 +33,7 @@ async def help(ctx) -> None:
 @bot.slash_command(name="gz", guild_ids=[363961340345188353])
 async def gz(ctx: discord.commands.context.ApplicationContext) -> None:
     """
-    Congratulates author with the todays holiday
+    Congratulates with the todays holiday
     """
     if os.listdir('cache') == 0:
         return await ctx.respond('Сегодня нет праздников :(')
@@ -40,6 +42,46 @@ async def gz(ctx: discord.commands.context.ApplicationContext) -> None:
         picture = discord.File(file)
     return await ctx.respond(file=picture)
     
+@bot.slash_command(name="settime", guild_ids=[363961340345188353])
+@commands.has_permissions(administrator=True)
+async def settime(ctx: discord.commands.context.ApplicationContext,
+                  time: discord.Option(str)) -> None:
+    """
+    Set time for everyday mailing
+    """
+    try:
+        time = validate_time(time)
+    except (ValueError, ImpossibleTimeError):
+        return await ctx.respond(f"Твое iq равно {str(randint(30, 60))}")
+    else:
+        if server_in_db(server_id=ctx.guild_id):
+            current_time = servers_mailing_time(server_id=ctx.guild_id)
+            remove_server_from_db(server_id=ctx.guild_id)
+            add_server_to_db(ctx.guild_id, ctx.channel_id, time)
+            return await ctx.respond(f'Время рассылки изменено с {current_time} на {time}🤙🤣🤣')
+        else:
+            add_server_to_db(ctx.guild_id, ctx.channel_id, time)
+            return await ctx.respond(f'Рассылка в {time} успешно подключена🤙🤣🤣')
+        
+@bot.slash_command(name="removemailing", guild_ids=[363961340345188353])
+@commands.has_permissions(administrator=True)
+async def removemailing(ctx: discord.commands.context.ApplicationContext) -> None:
+    """
+    Remove server from mailing list
+    """
+    remove_server_from_db(ctx.guild_id)
+    return await ctx.respond("Рассылка отключена 😢🥺🥹☹️😓😞😖😭😥")
+    
+def validate_time(time: str) -> str:
+    small_version = str( int( time.replace(':', '') ) )
+    time_length = len(small_version)
+    if time_length < 3 or time_length > 5:
+        raise ImpossibleTimeError
+    if time_length == 3:
+        time = '0' + small_version[0] + ':' + small_version[1:]
+    if int(time[3:])>60 or int(time[3:])<0 or int(time[:2])>=24 or int(time[:2])<0:
+        raise ImpossibleTimeError
+    return time
 
 
 def setup_logging() -> None:
@@ -64,6 +106,24 @@ def create_db() -> None:
     
     logging.info("mailing_servers database were successfully created")
     
+def servers_mailing_time(server_id: str) -> str:
+    con = sqlite3.connect('instance/mailing.sqlite3')
+    cursor = con.cursor()
+    cursor.execute(f"SELECT * FROM mailing_servers WHERE server_id={server_id}")
+    row = cursor.fetchone()
+    con.close()
+    
+    return row[2]
+    
+def server_in_db(server_id: str) -> bool:
+    con = sqlite3.connect('instance/mailing.sqlite3')
+    cursor = con.cursor()
+    cursor.execute(f"SELECT * FROM mailing_servers WHERE server_id={server_id}")
+    row = cursor.fetchone()
+    con.close()
+    
+    return row is not None
+    
 def add_server_to_db(server_id: str, channel_id: str, time: str) -> None:
     con = sqlite3.connect('instance/mailing.sqlite3')
     cursor = con.cursor()
@@ -87,6 +147,16 @@ def remove_server_from_db(server_id: str) -> None:
     
     logging.info(f"Server {server_id} was deleted from mailing_servers_db")
     
+def send_photo(channel_id):
+    channel = bot.get_channel(channel_id)
+    if len(os.listdir('cache')) == 0:
+        asyncio.run_coroutine_threadsafe(channel.send("Сегодня нет праздников 😢🥺🥹☹️😓😞😖😭😥"), bot.loop)
+    else:
+        photo_path = 'cache/' + choice(os.listdir('cache'))
+        with open(photo_path, 'rb') as file:
+            photo = discord.File(file)
+        asyncio.run_coroutine_threadsafe(channel.send(file=photo), bot.loop)
+                
 def start_mailing() -> None:
     current_time = datetime.today().strftime("%H:%M")
     con = sqlite3.connect('instance/mailing.sqlite3')
@@ -97,10 +167,10 @@ def start_mailing() -> None:
     row = cursor.fetchall()
     con.close()
     
-    for server_id, channel_id, time in row:
+    for _, channel_id, time in row:
         if time == current_time:
-            pass
-            # TODO sending to a chat
+            send_photo(channel_id=channel_id)
+            
 
 # Downloading and checking mailing
 def start_schedule_tasks() -> None:
