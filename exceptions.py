@@ -18,3 +18,6 @@ class ImpossibleTimeError(Exception):
 
 class LoginRequiredError(Exception):
     pass
+
+class ImpossibleTimeError(Exception):
+    pass
