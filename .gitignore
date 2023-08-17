@@ -1,0 +1,6 @@
+__pycache__
+cache/
+instance/
+logs/
+venv/
+settings.json
