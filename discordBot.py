@@ -23,14 +23,14 @@ bot = commands.Bot(command_prefix=SETTINGS['prefix'],
                    case_insensitive=True,
                    self_bot=True)
 
-@bot.slash_command(name="help", guild_ids=[363961340345188353])
+@bot.slash_command(name="help")
 async def help(ctx) -> None:
     """
     Displays default info in chat
     """
     await ctx.respond(HELP)
     
-@bot.slash_command(name="gz", guild_ids=[363961340345188353])
+@bot.slash_command(name="gz")
 async def gz(ctx: discord.commands.context.ApplicationContext) -> None:
     """
     Congratulates with the todays holiday
@@ -42,7 +42,7 @@ async def gz(ctx: discord.commands.context.ApplicationContext) -> None:
         picture = discord.File(file)
     return await ctx.respond(file=picture)
     
-@bot.slash_command(name="settime", guild_ids=[363961340345188353])
+@bot.slash_command(name="settime")
 @commands.has_permissions(administrator=True)
 async def settime(ctx: discord.commands.context.ApplicationContext,
                   time: discord.Option(str)) -> None:
@@ -63,7 +63,7 @@ async def settime(ctx: discord.commands.context.ApplicationContext,
             add_server_to_db(ctx.guild_id, ctx.channel_id, time)
             return await ctx.respond(f'Рассылка в {time} успешно подключена🤙🤣🤣')
         
-@bot.slash_command(name="removemailing", guild_ids=[363961340345188353])
+@bot.slash_command(name="removemailing")
 @commands.has_permissions(administrator=True)
 async def removemailing(ctx: discord.commands.context.ApplicationContext) -> None:
     """
