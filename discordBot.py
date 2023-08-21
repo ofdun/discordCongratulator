@@ -35,7 +35,7 @@ async def gz(ctx: discord.commands.context.ApplicationContext) -> None:
     """
     Congratulates with the todays holiday
     """
-    if os.listdir('cache') == 0:
+    if os.listdir('cache') == []:
         return await ctx.respond('Сегодня нет праздников :(')
     picture_path = 'cache/' + choice(os.listdir('cache'))
     with open(picture_path, 'rb') as file:
